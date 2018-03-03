@@ -33,7 +33,7 @@ class Graph:
             for j in range(y):
                 self.vertices[(i,j)] = Vertex(i,j,EMPTY)
 
-    def neighbours(self,coords):
+    def empty_neighbours(self,coords):
         vertex = self.vertices[coords]
         dirs = [[1,0],[0,1],[-1,0],[0,-1]]
         result = []
@@ -41,8 +41,19 @@ class Graph:
             neighbour_coords = (vertex.x + dir[0], vertex.y+dir[1])
             if 0 <= neighbour_coords[0] < self.x_range and 0 <= neighbour_coords[1] < self.y_range:
                 neighbour = self.vertices[neighbour_coords]
-                if neighbour.vertex_type != OCCUPIED:
+                if neighbour.vertex_type != OCCUPIED and neighbour.vertex_type != HEAD:
                     result.append(neighbour)
+        return result
+
+    def all_neighbours(self,coords):
+        vertex = self.vertices[coords]
+        dirs = [[1,0],[0,1],[-1,0],[0,-1]]
+        result = []
+        for dir in dirs:
+            neighbour_coords = (vertex.x + dir[0], vertex.y+dir[1])
+            if 0 <= neighbour_coords[0] < self.x_range and 0 <= neighbour_coords[1] < self.y_range:
+                neighbour = self.vertices[neighbour_coords]
+                result.append(neighbour)
         return result
 
     def clear(self,food_list,occupied_list):
@@ -56,6 +67,7 @@ class Vertex:
         self.x = x
         self.y = y
         self.vertex_type = vertex_type
+        self.length = None
 
 logic = Logic()
 graph = Graph()
@@ -78,6 +90,8 @@ def start():
     FOOD = 1
     global OCCUPIED
     OCCUPIED = 2
+    global HEAD
+    HEAD = 3
     data = bottle.request.json
     game_id = data.get('game_id')
     board_width = data.get('width')
@@ -112,19 +126,26 @@ def update_vertices(resp):
     snake_vertices = []
     snakes = resp['snakes']['data']
     for snake in snakes:
-        for point in snake['body']['data']:
+        for i,point in enumerate(snake['body']['data']):
             x = point['x']
             y = point['y']
             point_vertex = graph.vertices[(x,y)]
-            point_vertex.vertex_type = OCCUPIED
+            if i == 0:
+                point_vertex.vertex_type = HEAD
+                snake_length = snake['length']
+                point_vertex.length = snake_length
+                print("snake has length ",snake_length)
+            else:
+                point_vertex.vertex_type = OCCUPIED
             snake_vertices.append(point_vertex)
     return snake_vertices
 
 def get_head(resp):
     point = resp['you']['body']['data'][0]
+    length = resp['you']['length']
     x = point['x']
     y = point['y']
-    return graph.vertices[(x,y)]
+    return graph.vertices[(x,y)],length
 
 def get_closest_food(food_vertices,head):
     if len(food_vertices) == 1:
@@ -139,7 +160,7 @@ def get_closest_food(food_vertices,head):
     return food_vertices[min_index]
 
 def find_closest_neighbour(source,dest):
-    neighbours = graph.neighbours((source.x,source.y))
+    neighbours = graph.empty_neighbours((source.x,source.y))
     if len(neighbours) == 0:
         print("Got trapped")
         return(source) #what to do here?
@@ -174,7 +195,7 @@ def Dijkstra_shortest_path(source,dest):
                 while prev[u] != source:
                     u = prev[u]
                 return u
-            for neighbour in graph.neighbours((u.x,u.y)):
+            for neighbour in graph.empty_neighbours((u.x,u.y)):
                 alt = dist[u] + 1 #all weights are 1
                 if alt < dist[neighbour]:
                     dist[neighbour] = alt
@@ -200,18 +221,34 @@ def get_direction(head,next):
     else:
         return ''
 
+def check_collisions(head,next_vertex,my_length):
+    potential_collision = False
+    next_neighbours = graph.all_neighbours((next_vertex.x,next_vertex.y))
+    for neighbour in next_neighbours:
+        if neighbour.vertex_type == HEAD and neighbour != head and neighbour.length >= my_length:
+            potential_collision = True
+            print("There is a snake head that may collide at the next vertex")
+            break
+    if potential_collision:
+        for neighbour in graph.empty_neighbours((head.x,head.y)):
+            if neighbour != next_vertex:
+                print("going this alternate way instead",neighbour.x,neighbour.y)
+                return neighbour
+    return next_vertex
+
 @bottle.post('/move')
 def move():
     resp = bottle.request.json
     food_data = resp['food']['data']
     food_vertices = get_food_vertices(food_data) #returns list of vertices that contain food
     occupied_vertices = update_vertices(resp) #update vertices that contain snakes to OCCUPIED
-    head_vertex = get_head(resp)
+    head_vertex,my_length = get_head(resp)
     closest_food_vertex = get_closest_food(food_vertices,head_vertex) #find food that has smallest x,y distance
     next_vertex = Dijkstra_shortest_path(head_vertex,closest_food_vertex)
+    next_vertex = check_collisions(head_vertex,next_vertex,my_length)
     print("current head location: ",head_vertex.x,head_vertex.y)
     print("current food goal",closest_food_vertex.x,closest_food_vertex.y)
-    print("dikjstra next vertex ",next_vertex.x,next_vertex.y)
+    print("dijkstra next vertex ",next_vertex.x,next_vertex.y)
     direction = get_direction(head_vertex,next_vertex)
     print("next direction: ",direction)
     graph.clear(food_vertices,occupied_vertices)
@@ -238,7 +275,7 @@ application = bottle.default_app()
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        port = sys.argv[1]
+        port = str(sys.argv[1])
     else:
         port = '8080'
     # global EMPTY
@@ -250,5 +287,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv(port, '8080'),
+        port=os.getenv('PORT', port),
         debug = True)
