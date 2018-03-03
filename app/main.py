@@ -140,12 +140,19 @@ def update_vertices(resp):
             snake_vertices.append(point_vertex)
     return snake_vertices
 
-def get_head(resp):
-    point = resp['you']['body']['data'][0]
+def get_my_info(resp):
+    head = resp['you']['body']['data'][0]
     length = resp['you']['length']
-    x = point['x']
-    y = point['y']
-    return graph.vertices[(x,y)],length
+    health = resp['you']['health']
+    x = head['x']
+    y = head['y']
+    # tail_point = resp['you']['body']['data'][length-1]
+    # x_tail = tail_point['x']
+    # y_tail = tail_point['y']
+    # tail = graph.vertices[(x_tail,y_tail)]
+    # tail.vertex_type = EMPTY
+    # print("tail is",tail.x,tail.y)
+    return graph.vertices[(x,y)],length,health
 
 def get_closest_food(food_vertices,head):
     if len(food_vertices) == 1:
@@ -242,7 +249,7 @@ def move():
     food_data = resp['food']['data']
     food_vertices = get_food_vertices(food_data) #returns list of vertices that contain food
     occupied_vertices = update_vertices(resp) #update vertices that contain snakes to OCCUPIED
-    head_vertex,my_length = get_head(resp)
+    head_vertex,my_length,my_health = get_my_info(resp)
     closest_food_vertex = get_closest_food(food_vertices,head_vertex) #find food that has smallest x,y distance
     next_vertex = Dijkstra_shortest_path(head_vertex,closest_food_vertex)
     next_vertex = check_collisions(head_vertex,next_vertex,my_length)
