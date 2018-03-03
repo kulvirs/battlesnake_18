@@ -2,6 +2,7 @@ import bottle
 import os
 import random
 import heapq
+import sys
 #from priodict import priorityDictionary
 
 class Logic:
@@ -78,17 +79,18 @@ def start():
 
     graph.create(board_width,board_height)
 
-    head_url = '%s://%s/static/head.png' % (
+    head_url = '%s://%s/static/dh.png' % (
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
 
     return {
-        'color': '#00FF00',
+        'color': 'blueviolet',
         'taunt': '{} ({}x{})'.format(game_id, board_width, board_height),
         'head_url': head_url
     }
 
+#returns a list of vertices where each food point is
 def get_food_vertices(food_data):
     food_vertices = []
     for food_item in food_data:
@@ -99,6 +101,7 @@ def get_food_vertices(food_data):
         food_vertices.append(food_vertex)
     return food_vertices
 
+#updates vertices where snakes are
 def update_vertices(resp):
     snake_vertices = []
     snakes = resp['snakes']['data']
@@ -129,7 +132,7 @@ def get_closest_food(food_vertices,head):
             min_index = i
     return food_vertices[min_index]
 
-def find_shortest_path(source,dest):
+def find_closest_neighbour(source,dest):
     neighbours = graph.neighbours((source.x,source.y))
     if len(neighbours) == 0:
         print("Got trapped")
@@ -173,9 +176,7 @@ def Dijkstra_shortest_path(source,dest):
                     if neighbour not in visited:
                         heapq.heappush(Q,(dist[neighbour],neighbour))
     print("did not reach destination with Dijkstra")
-    return find_shortest_path(source,dest) #see if maybe Euclidean distance can find path
-
-
+    return find_closest_neighbour(source,dest) #see if maybe Euclidean distance can find path
 
 def get_direction(head,next):
     x_diff = next.x-head.x
@@ -198,14 +199,14 @@ def move():
     resp = bottle.request.json
     food_data = resp['food']['data']
     food_vertices = get_food_vertices(food_data) #returns list of vertices that contain food
-    occupied_vertices = update_vertices(resp) #update vertices that contain snakes
+    occupied_vertices = update_vertices(resp) #update vertices that contain snakes to OCCUPIED
     head_vertex = get_head(resp)
-    closest_food_vertex = get_closest_food(food_vertices,head_vertex)
-    #next_vertex = find_shortest_path(head_vertex,closest_food_vertex)
-    next_vertex_d = Dijkstra_shortest_path(head_vertex,closest_food_vertex)
-    print("dijstra next vertex ",next_vertex_d.x,next_vertex_d.y)
-    #print("next vertex: ",next_vertex.x,next_vertex.y)
-    direction = get_direction(head_vertex,next_vertex_d)
+    closest_food_vertex = get_closest_food(food_vertices,head_vertex) #find food that has smallest x,y distance
+    next_vertex = Dijkstra_shortest_path(head_vertex,closest_food_vertex)
+    print("current head location: ",head_vertex.x,head_vertex.y)
+    print("current food goal",closest_food_vertex.x,closest_food_vertex.y)
+    print("dikjstra next vertex ",next_vertex.x,next_vertex.y)
+    direction = get_direction(head_vertex,next_vertex)
     print("next direction: ",direction)
     graph.clear(food_vertices,occupied_vertices)
 
@@ -230,6 +231,10 @@ def move():
 application = bottle.default_app()
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        port = sys.argv[1]
+    else:
+        port = '8080'
     global EMPTY
     EMPTY = 0
     global FOOD
@@ -239,5 +244,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8081'),
+        port=os.getenv(port, '8080'),
         debug = True)
