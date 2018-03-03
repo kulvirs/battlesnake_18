@@ -146,12 +146,12 @@ def get_my_info(resp):
     health = resp['you']['health']
     x = head['x']
     y = head['y']
-    # tail_point = resp['you']['body']['data'][length-1]
-    # x_tail = tail_point['x']
-    # y_tail = tail_point['y']
-    # tail = graph.vertices[(x_tail,y_tail)]
-    # tail.vertex_type = EMPTY
-    # print("tail is",tail.x,tail.y)
+    tail_point = resp['you']['body']['data'][length-1]
+    x_tail = tail_point['x']
+    y_tail = tail_point['y']
+    tail = graph.vertices[(x_tail,y_tail)]
+    tail.vertex_type = EMPTY
+    print("tail is",tail.x,tail.y)
     return graph.vertices[(x,y)],length,health
 
 def get_closest_food(food_vertices,head):
@@ -183,20 +183,22 @@ def find_closest_neighbour(source,dest):
 def Dijkstra_shortest_path(source,dest):
     dist = {source: 0}
     prev = {source: None}
-    visited = []
+    visited = {source: False}
     Q = [] #PQ
     heapq.heappush(Q,(dist[source],source))
-
+    i = 1
     for vertex in graph.vertices.values():
         if vertex.vertex_type != OCCUPIED and vertex != source:
+            i += 1
             dist[vertex] = float('inf')
             prev[vertex] = None
+            visited[vertex] = False
             #heapq.heappush(Q,(dist[vertex],vertex))
 
     while Q:
         dist_u,u = heapq.heappop(Q)
-        if u not in visited:
-            visited.append(u)
+        if not visited[u]:
+            visited[u] = True
             if u == dest:
                 print("got to destination")
                 while prev[u] != source:
@@ -207,7 +209,7 @@ def Dijkstra_shortest_path(source,dest):
                 if alt < dist[neighbour]:
                     dist[neighbour] = alt
                     prev[neighbour] = u
-                    if neighbour not in visited:
+                    if not visited[neighbour]:
                         heapq.heappush(Q,(dist[neighbour],neighbour))
     print("did not reach destination with Dijkstra")
     return find_closest_neighbour(source,dest) #see if maybe Euclidean distance can find path
@@ -273,7 +275,7 @@ def move():
     # print ("new direction: %s"%direction)
     return {
         'move': direction,
-        'taunt': 'battlesnake-python!'
+        'taunt': 'Avada Kedavra!'
     }
 
 
