@@ -72,6 +72,12 @@ def static(path):
 
 @bottle.post('/start')
 def start():
+    global EMPTY
+    EMPTY = 0
+    global FOOD
+    FOOD = 1
+    global OCCUPIED
+    OCCUPIED = 2
     data = bottle.request.json
     game_id = data.get('game_id')
     board_width = data.get('width')
@@ -235,12 +241,12 @@ if __name__ == '__main__':
         port = sys.argv[1]
     else:
         port = '8080'
-    global EMPTY
-    EMPTY = 0
-    global FOOD
-    FOOD = 1
-    global OCCUPIED
-    OCCUPIED = 2
+    # global EMPTY
+    # EMPTY = 0
+    # global FOOD
+    # FOOD = 1
+    # global OCCUPIED
+    # OCCUPIED = 2
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
