@@ -3,6 +3,7 @@ import os
 import random
 import heapq
 import sys
+import time
 #from priodict import priorityDictionary
 
 class Logic:
@@ -194,8 +195,8 @@ def Dijkstra_shortest_path(source,dest):
             prev[vertex] = None
             visited[vertex] = False
             #heapq.heappush(Q,(dist[vertex],vertex))
-
-    while Q:
+    end_time = time.time() + 0.180
+    while Q and time.time() <= end_time:
         dist_u,u = heapq.heappop(Q)
         if not visited[u]:
             visited[u] = True
@@ -211,6 +212,7 @@ def Dijkstra_shortest_path(source,dest):
                     prev[neighbour] = u
                     if not visited[neighbour]:
                         heapq.heappush(Q,(dist[neighbour],neighbour))
+    print('*'*200)
     print("did not reach destination with Dijkstra")
     return find_closest_neighbour(source,dest) #see if maybe Euclidean distance can find path
 
@@ -233,12 +235,15 @@ def get_direction(head,next):
 def check_collisions(head,next_vertex,my_length):
     potential_collision = False
     next_neighbours = graph.all_neighbours((next_vertex.x,next_vertex.y))
+    num_occupied = 0
     for neighbour in next_neighbours:
+        if neighbour.vertex_type == HEAD or neighbour.vertex_type == OCCUPIED:
+            num_occupied += 1
         if neighbour.vertex_type == HEAD and neighbour != head and neighbour.length >= my_length:
             potential_collision = True
             print("There is a snake head that may collide at the next vertex")
             break
-    if potential_collision:
+    if potential_collision or num_occupied >= 4:
         for neighbour in graph.empty_neighbours((head.x,head.y)):
             if neighbour != next_vertex:
                 print("going this alternate way instead",neighbour.x,neighbour.y)
