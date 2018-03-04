@@ -100,7 +100,7 @@ def start():
 
     graph.create(board_width,board_height)
 
-    head_url = '%s://%s/static/dh.png' % (
+    head_url = '%s://%s/static/200w_d.gif' % (
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
