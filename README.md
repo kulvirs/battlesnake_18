@@ -9,4 +9,5 @@ shortest-path finder if Dijkstra's algorithm is unable to find a path to the foo
 * Don't make the snake super greedy, think about when you actually need to go for food
 * Add some logic to avoid the snake getting trapped by looping in on itself
 * Try using an A* search algorithm instead of Dijkstra
+* Make cases for different scenarios (number of snakes still alive, amount of food on the board, etc.)
 
